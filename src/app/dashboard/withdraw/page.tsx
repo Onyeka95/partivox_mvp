@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
-import { supabase } from "@/lib/supabase";
+import { useSupabase } from "@/lib/supabase-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +18,7 @@ const MIN_WITHDRAWAL_DIAMONDS = 1000; // Minimum to prevent spam
 
 export default function WithdrawPage() {
   const { user, isLoaded } = useUser();
+  const supabase = useSupabase();
 
   const [balance, setBalance] = useState<number>(0);
   const [amount, setAmount] = useState("");
@@ -44,7 +45,7 @@ export default function WithdrawPage() {
     };
 
     loadData();
-  }, [isLoaded, user]);
+  }, [isLoaded, user, supabase]);
 
   // Live calculations
   const diamonds = Number(amount) || 0;

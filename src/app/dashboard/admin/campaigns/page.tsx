@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
+import { useSupabase } from "@/lib/supabase-client";
 import {
   Card,
   CardContent,
@@ -15,6 +15,7 @@ import { Loader2, CheckCircle, XCircle, CheckSquare } from "lucide-react";
 import { toast } from "sonner";
 
 export default function AdminCampaignsPage() {
+  const supabase = useSupabase();
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState<string | null>(null);

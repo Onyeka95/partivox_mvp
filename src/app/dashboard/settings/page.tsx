@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
-import { supabase } from "@/lib/supabase";
+import { useSupabase } from "@/lib/supabase-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,6 +12,7 @@ import { toast } from "sonner";
 
 export default function SettingsPage() {
   const { user, isLoaded } = useUser();
+  const supabase = useSupabase();
 
   const [twitterHandle, setTwitterHandle] = useState("");
   const [walletAddress, setWalletAddress] = useState("");
@@ -37,7 +38,7 @@ export default function SettingsPage() {
     };
 
     loadBindings();
-  }, [isLoaded, user]);
+  }, [isLoaded, user, supabase]);
 
   const saveBindings = async () => {
     if (!user?.id) return;

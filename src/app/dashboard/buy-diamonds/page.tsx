@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
-import { supabase } from "@/lib/supabase";
+import { useSupabase } from "@/lib/supabase-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,7 +23,7 @@ const PLATFORM_FEE_PERCENT = 20;     // 20% fee on purchase
 
 export default function BuyDiamondsPage() {
   const { user, isLoaded } = useUser();
-
+  const supabase = useSupabase();
   const [diamondsWanted, setDiamondsWanted] = useState("");
   const [txHash, setTxHash] = useState("");
   const [proofFile, setProofFile] = useState<File | null>(null);       // ← NEW: screenshot/proof
@@ -46,7 +46,7 @@ export default function BuyDiamondsPage() {
     };
 
     loadBalance();
-  }, [isLoaded, user]);
+  }, [isLoaded, user, supabase]);
 
   const totalUSDT = Number(diamondsWanted) * DIAMOND_TO_USDT_RATE;
   const feeUSDT = totalUSDT * (PLATFORM_FEE_PERCENT / 100);

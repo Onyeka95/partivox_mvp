@@ -12,7 +12,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-// import { supabase } from "@/lib/supabase";
 import { useSupabase } from "@/lib/supabase-client";
 import { useUser } from "@clerk/nextjs";
 

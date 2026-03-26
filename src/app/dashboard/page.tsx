@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
-// import { supabase } from "@/lib/supabase";
 import { useSupabase } from "@/lib/supabase-client";
 import { Button } from "@/components/ui/button";
 import { Loader2, ListChecks, Wallet, FileText, AlertCircle } from "lucide-react";

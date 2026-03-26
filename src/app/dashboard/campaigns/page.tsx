@@ -15,12 +15,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { X } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { useSupabase } from "@/lib/supabase-client";
 import { useUser } from "@clerk/nextjs";
 
 export default function CreateCampaignPage() {
   const { user } = useUser();
-
+  const supabase = useSupabase();
+  
   // Form state
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");

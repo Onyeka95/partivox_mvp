@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
-import { supabase } from "@/lib/supabase";
+import { useSupabase } from "@/lib/supabase-client";
 import {
   Card,
   CardContent,
@@ -18,6 +18,7 @@ import { toast } from "sonner";
 
 export default function AdminClaimsPage() {
   const { user } = useUser();
+  const supabase = useSupabase();
   const [claims, setClaims] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
-import { supabase } from "@/lib/supabase";
+import { useSupabase } from "@/lib/supabase-client";
 import {
   Card,
   CardContent,
@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 
 export default function MyCampaignsPage() {
   const { user, isLoaded } = useUser();
+  const supabase = useSupabase();
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -48,7 +49,7 @@ export default function MyCampaignsPage() {
     };
 
     fetchMyCampaigns();
-  }, [isLoaded, user]);
+  }, [isLoaded, user, supabase]);
 
   if (!isLoaded || loading) {
     return (

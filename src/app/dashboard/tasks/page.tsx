@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
+import { useSupabase } from "@/lib/supabase-client";
 import { useUser } from "@clerk/nextjs";
 import Link from "next/link";
 import {
@@ -17,6 +17,7 @@ import { Loader2 } from "lucide-react";
 
 export default function TaskFeedPage() {
   const { user, isLoaded } = useUser();
+  const supabase = useSupabase();
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

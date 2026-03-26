@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { useSupabase } from "@/lib/supabase-client";
 import { useUser } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +22,8 @@ export default function ClaimCampaignPage() {
   const { id: campaignId } = useParams();
   const router = useRouter();
   const { user, isLoaded } = useUser();
-
+  const supabase = useSupabase();
+  
   const [campaign, setCampaign] = useState<any>(null);
   const [hasClaimed, setHasClaimed] = useState<boolean | null>(null); // null = loading
   const [loading, setLoading] = useState(true);

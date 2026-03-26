@@ -1,95 +1,109 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
+import { useSupabase } from "@/lib/supabase-client";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2 } from "lucide-react";
 
 export default function AdminDashboard() {
+  const supabase = useSupabase();
+
   const [counts, setCounts] = useState({
     pendingCampaigns: 0,
     pendingClaims: 0,
     pendingPurchases: 0,
     pendingWithdrawals: 0,
   });
+
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // Fetch initial counts
-    const fetchCounts = async () => {
-      setLoading(true);
+  const fetchCounts = async () => {
+    setLoading(true);
 
-      const queries = [
-        supabase.from("campaigns").select("id", { count: "exact" }).eq("status", "pending"),
-        supabase.from("claims").select("id", { count: "exact" }).eq("status", "pending"),
-        supabase.from("diamond_purchases").select("id", { count: "exact" }).eq("status", "pending"),
-        supabase.from("withdrawals").select("id", { count: "exact" }).eq("status", "pending"),
-      ];
+    try {
+      const [campaigns, claims, purchases, withdrawals] = await Promise.all([
+        supabase
+          .from("campaigns")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "pending"),
 
-      const results = await Promise.all(queries.map(q => q));
+        supabase
+          .from("claims")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "pending"),
+
+        supabase
+          .from("diamond_purchases")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "pending"),
+
+        supabase
+          .from("withdrawals")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "pending"),
+      ]);
 
       setCounts({
-        pendingCampaigns: results[0].count || 0,
-        pendingClaims: results[1].count || 0,
-        pendingPurchases: results[2].count || 0,
-        pendingWithdrawals: results[3].count || 0,
+        pendingCampaigns: campaigns.count || 0,
+        pendingClaims: claims.count || 0,
+        pendingPurchases: purchases.count || 0,
+        pendingWithdrawals: withdrawals.count || 0,
       });
-
+    } catch (err) {
+      console.error("Failed to fetch admin counts:", err);
+    } finally {
       setLoading(false);
-    };
+    }
+  };
 
+  useEffect(() => {
     fetchCounts();
 
-    // Realtime subscriptions – update counts when anything changes in pending state
+    // Realtime subscriptions for pending counts
     const channels = [
-      // Campaigns
       supabase
-        .channel("admin-pending-campaigns")
-        .on("postgres_changes", { event: "*", schema: "public", table: "campaigns" }, (payload) => {
-          if (payload.new?.status === "pending" || payload.old?.status === "pending") {
-            fetchCounts();
-          }
-        })
+        .channel("admin-campaigns")
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "campaigns" },
+          () => fetchCounts()
+        )
         .subscribe(),
 
-      // Claims
       supabase
-        .channel("admin-pending-claims")
-        .on("postgres_changes", { event: "*", schema: "public", table: "claims" }, (payload) => {
-          if (payload.new?.status === "pending" || payload.old?.status === "pending") {
-            fetchCounts();
-          }
-        })
+        .channel("admin-claims")
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "claims" },
+          () => fetchCounts()
+        )
         .subscribe(),
 
-      // Purchases
       supabase
-        .channel("admin-pending-purchases")
-        .on("postgres_changes", { event: "*", schema: "public", table: "diamond_purchases" }, (payload) => {
-          if (payload.new?.status === "pending" || payload.old?.status === "pending") {
-            fetchCounts();
-          }
-        })
+        .channel("admin-purchases")
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "diamond_purchases" },
+          () => fetchCounts()
+        )
         .subscribe(),
 
-      // Withdrawals
       supabase
-        .channel("admin-pending-withdrawals")
-        .on("postgres_changes", { event: "*", schema: "public", table: "withdrawals" }, (payload) => {
-          if (payload.new?.status === "pending" || payload.old?.status === "pending") {
-            fetchCounts();
-          }
-        })
+        .channel("admin-withdrawals")
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "withdrawals" },
+          () => fetchCounts()
+        )
         .subscribe(),
     ];
 
-    // Cleanup on unmount
     return () => {
-      channels.forEach(channel => supabase.removeChannel(channel));
+      channels.forEach((channel) => supabase.removeChannel(channel));
     };
-  }, []);
+  }, [supabase]);
 
   if (loading) {
     return (
@@ -120,7 +134,7 @@ export default function AdminDashboard() {
                 )}
               </div>
               <p className="text-gray-400">
-                Approve, reject or mark campaigns as completed before they go live.
+                Approve, reject or mark campaigns as completed.
               </p>
             </div>
             <Button className="mt-6 bg-[#caf403] hover:bg-[#b0e000] text-black">
