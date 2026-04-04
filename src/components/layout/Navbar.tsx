@@ -8,7 +8,21 @@ import Link from "next/link";
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
-  const { isSignedIn } = useUser();
+  // const { isSignedIn } = useUser();
+  const { isSignedIn, user } = useUser();
+
+  const adminEmails = [
+  "onyekaiwuji@gmail.com",
+  "deborahmomodu999@gmail.com",
+  "partivox11@gmail.com",
+];
+
+const userEmail = user?.primaryEmailAddress?.emailAddress;
+
+const dashboardLink =
+  isSignedIn && userEmail && adminEmails.includes(userEmail)
+    ? "/dashboard"
+    : "/dashboard_user";
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-transparent px-4 md:px-8 py-4">
@@ -81,13 +95,22 @@ export default function Navbar() {
             </a>
 
             {/* Added: Dashboard link (visible to everyone) */}
-            <Link
+            {/* <Link
               href="/dashboard"
               className="hover:text-[#caf403] transition py-3 md:py-0 font-medium"
               onClick={() => setIsOpen(false)}
             >
               Dashboard
-            </Link>
+            </Link> */}
+            <Link
+  href={dashboardLink}
+  className="hover:text-[#caf403] transition py-3 md:py-0 font-medium"
+  onClick={() => setIsOpen(false)}
+>
+  Dashboard
+</Link>
+
+            
           </div>
 
           {/* Auth area */}

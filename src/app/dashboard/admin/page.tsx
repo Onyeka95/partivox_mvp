@@ -1,13 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
+import { useAuth } from "@clerk/nextjs";
+import { createClient } from "@supabase/supabase-js";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2 } from "lucide-react";
 
 export default function AdminDashboard() {
+  const { getToken } = useAuth();
 
   const [counts, setCounts] = useState({
     pendingCampaigns: 0,
@@ -18,27 +20,39 @@ export default function AdminDashboard() {
 
   const [loading, setLoading] = useState(true);
 
-  const fetchCounts = async () => {
-    setLoading(true);
+  const getSupabaseWithToken = async () => {
+    const token = await getToken({ template: "supabase" });
+    if (!token) throw new Error("No auth token");
 
+    return createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { global: { headers: { Authorization: `Bearer ${token}` } } }
+    );
+  };
+
+  const fetchCounts = async () => {
     try {
+      setLoading(true);
+      const supabaseWithToken = await getSupabaseWithToken();
+
       const [campaigns, claims, purchases, withdrawals] = await Promise.all([
-        supabase
+        supabaseWithToken
           .from("campaigns")
           .select("id", { count: "exact", head: true })
           .eq("status", "pending"),
 
-        supabase
+        supabaseWithToken
           .from("claims")
           .select("id", { count: "exact", head: true })
           .eq("status", "pending"),
 
-        supabase
+        supabaseWithToken
           .from("diamond_purchases")
           .select("id", { count: "exact", head: true })
           .eq("status", "pending"),
 
-        supabase
+        supabaseWithToken
           .from("withdrawals")
           .select("id", { count: "exact", head: true })
           .eq("status", "pending"),
@@ -60,49 +74,43 @@ export default function AdminDashboard() {
   useEffect(() => {
     fetchCounts();
 
-    // Realtime subscriptions for pending counts
-    const channels = [
-      supabase
-        .channel("admin-campaigns")
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "campaigns" },
-          () => fetchCounts()
-        )
-        .subscribe(),
+    // Realtime subscriptions
+    const setupRealtime = async () => {
+      const supabaseWithToken = await getSupabaseWithToken();
 
-      supabase
-        .channel("admin-claims")
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "claims" },
-          () => fetchCounts()
-        )
-        .subscribe(),
+      const channels = [
+        supabaseWithToken
+          .channel("admin-campaigns")
+          .on("postgres_changes", { event: "*", schema: "public", table: "campaigns" }, fetchCounts)
+          .subscribe(),
 
-      supabase
-        .channel("admin-purchases")
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "diamond_purchases" },
-          () => fetchCounts()
-        )
-        .subscribe(),
+        supabaseWithToken
+          .channel("admin-claims")
+          .on("postgres_changes", { event: "*", schema: "public", table: "claims" }, fetchCounts)
+          .subscribe(),
 
-      supabase
-        .channel("admin-withdrawals")
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "withdrawals" },
-          () => fetchCounts()
-        )
-        .subscribe(),
-    ];
+        supabaseWithToken
+          .channel("admin-purchases")
+          .on("postgres_changes", { event: "*", schema: "public", table: "diamond_purchases" }, fetchCounts)
+          .subscribe(),
+
+        supabaseWithToken
+          .channel("admin-withdrawals")
+          .on("postgres_changes", { event: "*", schema: "public", table: "withdrawals" }, fetchCounts)
+          .subscribe(),
+      ];
+
+      return () => {
+        channels.forEach((ch) => supabaseWithToken.removeChannel(ch));
+      };
+    };
+
+    const cleanup = setupRealtime();
 
     return () => {
-      channels.forEach((channel) => supabase.removeChannel(channel));
+      cleanup.then((fn) => fn?.());
     };
-  }, [supabase]);
+  }, []);
 
   if (loading) {
     return (

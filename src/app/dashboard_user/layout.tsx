@@ -15,8 +15,6 @@ export default function DashboardLayout({
   const { isLoaded, isSignedIn, user } = useUser();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  
-
   // Optional: redirect if not signed in (middleware already handles, this is fallback)
   useEffect(() => {
     if (isLoaded && !isSignedIn) {
@@ -74,7 +72,7 @@ export default function DashboardLayout({
 
           <nav className="space-y-2">
             <Link
-              href="/dashboard"
+              href="/dashboard_user"
               className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition"
               onClick={() => setIsSidebarOpen(false)}
             >
@@ -83,7 +81,7 @@ export default function DashboardLayout({
             </Link>
 
             <Link
-              href="/dashboard/campaigns"
+              href="/dashboard_user/campaigns"
               className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition"
               onClick={() => setIsSidebarOpen(false)}
             >
@@ -92,7 +90,7 @@ export default function DashboardLayout({
             </Link>
 
             <Link
-              href="/dashboard/tasks"
+              href="/dashboard_user/tasks"
               className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition"
               onClick={() => setIsSidebarOpen(false)}
             >
@@ -101,7 +99,7 @@ export default function DashboardLayout({
             </Link>
 
             <Link
-              href="/dashboard/settings"
+              href="/dashboard_user/settings"
               className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition"
               onClick={() => setIsSidebarOpen(false)}
             >
@@ -109,15 +107,15 @@ export default function DashboardLayout({
               <span>Settings</span>
             </Link>
 
-            {/* `Admin` links – visible to everyone, but middleware protects */}
-            <Link
+            {/* Admin links – visible to everyone, but middleware protects */}
+            {/* <Link
               href="/dashboard/admin"
               className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition text-yellow-400 hover:text-yellow-300"
               onClick={() => setIsSidebarOpen(false)}
             >
               <span className="text-xl">🛡️</span>
               <span>Admin</span>
-            </Link>
+            </Link> */}
 
             
           </nav>

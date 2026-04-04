@@ -34,7 +34,8 @@ export default function AdminPurchasesPage() {
         .from("diamond_purchases")
         .select(`
           *,
-          users!inner (
+           
+          users(
             email,
             twitter_handle
           )

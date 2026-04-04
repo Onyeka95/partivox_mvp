@@ -1,45 +1,38 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
-import { NextResponse } from 'next/server';
+import {
+  clerkMiddleware,
+  createRouteMatcher,
+  clerkClient,
+} from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 
-// Protect ALL dashboard routes (requires login)
-const isProtectedRoute = createRouteMatcher([
-  '/dashboard(.*)',
-]);
-
-// Extra strict check for admin sub-routes
-const isAdminRoute = createRouteMatcher([
-  '/dashboard/admin(.*)',
-]);
+const isUserRoute = createRouteMatcher(["/dashboard_user(.*)"]);
+const isAdminRoute = createRouteMatcher(["/dashboard$","/dashboard/(.*)"]);
 
 export default clerkMiddleware(async (auth, req) => {
-  const authObject = await auth();
+  const { userId } = await auth();
+  const url = req.nextUrl.clone();
 
-  if (isProtectedRoute(req)) {
-    if (!authObject.userId) {
-      return NextResponse.redirect(new URL('/sign-in', req.url));
-    }
+  // Require login
+  if ((isUserRoute(req) || isAdminRoute(req)) && !userId) {
+    url.pathname = "/sign-in";
+    return NextResponse.redirect(url);
+  }
 
-    if (isAdminRoute(req)) {
-      const userId = authObject.userId;
+  // Protect admin dashboard
+  if (isAdminRoute(req) && userId) {
+    const client = await clerkClient(); // ✅ v5 fix
+    const user = await client.users.getUser(userId);
+    const userEmail = user.primaryEmailAddress?.emailAddress;
 
-      // Hardcode your allowed admin USER IDs (from Clerk)
-      const allowedAdminUserIds = [
-        'user_3Arrf7r89SMxXKFp8GgVAZqB9XY',  // ← your main one from log
-        'user_3ArqhZIv4CEH1lW3GIGxm5ng1TO', // add the other two
-        // 'user_yyyyyy',
-      ];
+    const adminEmails = [
+      "onyekaiwuji@gmail.com",
+      "deborahmomodu999@gmail.com",
+      "partivox11@gmail.com",
+    ];
 
-      // Debug log – check server terminal
-      console.log('Admin check:', {
-        currentUserId: userId,
-        allowedIds: allowedAdminUserIds,
-        isAllowed: allowedAdminUserIds.includes(userId || ''),
-        path: req.nextUrl.pathname,
-      });
-
-      if (!userId || !allowedAdminUserIds.includes(userId)) {
-        return NextResponse.redirect(new URL('/dashboard/access-denied', req.url));
-      }
+    if (!userEmail || !adminEmails.includes(userEmail)) {
+      url.pathname = "/dashboard_user";
+      return NextResponse.redirect(url);
     }
   }
 
@@ -48,7 +41,7 @@ export default clerkMiddleware(async (auth, req) => {
 
 export const config = {
   matcher: [
-    '/dashboard/:path*',
-    '/((?!_next/static|_next/image|favicon.ico|sign-in|sign-up).*)',
+    "/dashboard/:path*",
+    "/dashboard_user/:path*",
   ],
 };
