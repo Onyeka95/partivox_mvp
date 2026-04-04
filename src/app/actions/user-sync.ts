@@ -4,11 +4,15 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { currentUser } from '@clerk/nextjs/server';
 
-export async function syncUserProfile() {
-  const clerkUser = await currentUser();
-
-  if (!clerkUser) {
-    return { error: 'Not authenticated' };
+export async function syncUserProfile({
+  id,
+  email,
+}: {
+  id: string;
+  email: string;
+}) {
+  if (!id || !email) {
+    return { success: false, error: 'Missing user data' };
   }
 
   const cookieStore = await cookies();
@@ -18,36 +22,39 @@ export async function syncUserProfile() {
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     {
       cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
+        getAll() { return cookieStore.getAll(); },
         setAll(cookiesToSet) {
           try {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options);
-            });
-          } catch {
-            // Ignore error in Server Component - safe if middleware refreshes sessions
-          }
+            cookiesToSet.forEach(({ name, value, options }) => 
+              cookieStore.set(name, value, options)
+            );
+          } catch {}
         },
       },
     }
   );
 
-  const userData = {
-    id: clerkUser.id,
-    email: clerkUser.emailAddresses[0]?.emailAddress || null,
-  };
+  try {
+    const { error } = await supabase
+      .from('users')
+      .upsert({
+        id,
+        email: email.toLowerCase().trim(),
+        // IMPORTANT: Do NOT set diamonds_balance here — only update other fields
+        updated_at: new Date().toISOString(),
+      }, { 
+        onConflict: 'id' 
+      });
 
-  const { error } = await supabase
-    .from('users')
-    .upsert(userData, { onConflict: 'id' });
+    if (error) {
+      console.error('Sync error:', error);
+      return { success: false, error: error.message };
+    }
 
-  if (error) {
-    console.error('Server sync failed:', error);
-    return { error: error.message };
+    console.log('✅ User synced successfully:', email);
+    return { success: true };
+  } catch (err: any) {
+    console.error('Sync exception:', err);
+    return { success: false, error: err.message };
   }
-
-  console.log('Server sync success');
-  return { success: true };
 }

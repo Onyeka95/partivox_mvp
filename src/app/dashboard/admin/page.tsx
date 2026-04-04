@@ -1,14 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSupabase } from "@/lib/supabase-client";
+import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2 } from "lucide-react";
 
 export default function AdminDashboard() {
-  const supabase = useSupabase();
 
   const [counts, setCounts] = useState({
     pendingCampaigns: 0,

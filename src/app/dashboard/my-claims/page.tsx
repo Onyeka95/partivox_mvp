@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
-import { useSupabase } from "@/lib/supabase-client";
+import { supabase } from "@/lib/supabase";
 import {
   Card,
   CardContent,
@@ -16,7 +16,6 @@ import { Loader2, ExternalLink } from "lucide-react";
 
 export default function MyClaimsPage() {
   const { user, isLoaded } = useUser();
-  const supabase = useSupabase();
 
   const [claims, setClaims] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,7 +59,7 @@ export default function MyClaimsPage() {
     }
 
     fetchMyClaims();
-  }, [isLoaded, user, supabase]);
+  }, [isLoaded, user]);
 
   // Show loading while Clerk is still checking auth
   if (!isLoaded || loading) {

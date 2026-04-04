@@ -1,35 +1,58 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSupabase } from "@/lib/supabase-client";
-import { useUser } from "@clerk/nextjs";
+import { useUser, useAuth } from "@clerk/nextjs";
+import { createClient } from "@supabase/supabase-js";
 import Link from "next/link";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 export default function TaskFeedPage() {
   const { user, isLoaded } = useUser();
-  const supabase = useSupabase();
+  const { getToken } = useAuth();
+
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const getSupabaseWithToken = async () => {
+    const token = await getToken({ template: "supabase" });
+    if (!token) throw new Error("Authentication token missing");
+
+    return createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        global: { headers: { Authorization: `Bearer ${token}` } }
+      }
+    );
+  };
+
   useEffect(() => {
     async function fetchCampaigns() {
+      if (!isLoaded || !user) {
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
-        const { data, error } = await supabase
+        setError(null);
+
+        const supabaseWithToken = await getSupabaseWithToken();
+
+        const { data, error } = await supabaseWithToken
           .from("campaigns")
-          .select("*")
-          .neq("status", "completed")  // ← Hide completed campaigns
+          .select("id, title, description, thumbnail_url")
+          .eq("status", "approved")
           .order("created_at", { ascending: false });
 
         if (error) throw error;
@@ -38,13 +61,14 @@ export default function TaskFeedPage() {
       } catch (err: any) {
         console.error("Error fetching campaigns:", err);
         setError(err.message || "Failed to load tasks");
+        toast.error("Failed to load available tasks");
       } finally {
         setLoading(false);
       }
     }
 
     fetchCampaigns();
-  }, []);
+  }, [isLoaded, user]);
 
   if (!isLoaded || loading) {
     return (
@@ -60,6 +84,9 @@ export default function TaskFeedPage() {
         <div className="text-center">
           <p className="text-red-400 text-xl mb-4">Error loading tasks</p>
           <p className="text-gray-400">{error}</p>
+          <Button onClick={() => window.location.reload()} className="mt-6">
+            Retry
+          </Button>
         </div>
       </div>
     );
@@ -68,21 +95,22 @@ export default function TaskFeedPage() {
   return (
     <div className="min-h-screen bg-[#0d0d0d] text-white p-6 md:p-8">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-4xl font-bold mb-8">Available Tasks</h1>
-        <p className="text-gray-400 mb-12">
+        <h1 className="text-4xl font-bold mb-2">Available Tasks</h1>
+        <p className="text-gray-400 mb-10">
           Browse campaigns and earn diamonds by completing simple engagements.
         </p>
 
         {campaigns.length === 0 ? (
           <div className="text-center text-gray-400 py-20 text-xl">
-            No active campaigns available right now. Check back soon!
+            No active campaigns available right now.<br />
+            Check back later!
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {campaigns.map((campaign) => (
               <Card
                 key={campaign.id}
-                className="bg-[#1a1a1a] border border-gray-800 overflow-hidden hover:border-gray-600 transition-all duration-300 flex flex-col"
+                className="bg-[#1a1a1a] border border-gray-800 hover:border-[#caf403] transition-all flex flex-col h-full"
               >
                 {campaign.thumbnail_url && (
                   <img
@@ -91,30 +119,22 @@ export default function TaskFeedPage() {
                     className="w-full h-40 object-cover"
                   />
                 )}
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg text-white line-clamp-2">
+
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg line-clamp-2 leading-tight text-white">
                     {campaign.title}
                   </CardTitle>
-                  <CardDescription className="text-gray-400 line-clamp-2 text-sm">
-                    {campaign.description}
-                  </CardDescription>
                 </CardHeader>
 
-                <CardContent className="flex-grow pb-2">
-                  {/* Compact max participants box */}
-                  <div className="bg-[#0f0f0f] p-3 rounded-lg border border-gray-700 text-sm">
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-400">Max participants:</span>
-                      <span className="font-medium text-[#caf403]">
-                        {campaign.max_participants || "Unlimited"}
-                      </span>
-                    </div>
-                  </div>
+                <CardContent className="flex-grow">
+                  <p className="text-gray-400 text-sm line-clamp-4">
+                    {campaign.description}
+                  </p>
                 </CardContent>
 
-                <CardFooter className="pt-2">
+                <CardFooter className="pt-4">
                   <Link href={`/dashboard/claim/${campaign.id}`} className="w-full">
-                    <Button className="w-full bg-[#caf403] hover:bg-[#a0d900] text-black py-5 text-base">
+                    <Button className="w-full bg-[#caf403] hover:bg-[#b0e000] text-black py-5 font-semibold">
                       Start Tasks
                     </Button>
                   </Link>

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useUser } from "@clerk/nextjs";
-import { useSupabase } from "@/lib/supabase-client";
+import { useUser, useAuth } from "@clerk/nextjs";
+import { createClient } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,57 +12,93 @@ import { toast } from "sonner";
 
 export default function SettingsPage() {
   const { user, isLoaded } = useUser();
-  const supabase = useSupabase();
+  const { getToken } = useAuth();
 
   const [twitterHandle, setTwitterHandle] = useState("");
   const [walletAddress, setWalletAddress] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // Load existing bindings
+  // Load existing data
   useEffect(() => {
     if (!isLoaded || !user?.id) return;
 
-    const loadBindings = async () => {
-      const { data } = await supabase
-        .from("users")
-        .select("twitter_handle, wallet_address")
-        .eq("id", user.id)
-        .single();
+    const loadSettings = async () => {
+      try {
+        const token = await getToken({ template: "supabase" });
+        if (!token) return;
 
-      if (data) {
-        setTwitterHandle(data.twitter_handle || "");
-        setWalletAddress(data.wallet_address || "");
+        const supabaseWithToken = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          { global: { headers: { Authorization: `Bearer ${token}` } } }
+        );
+
+        const { data } = await supabaseWithToken
+          .from("users")
+          .select("twitter_handle, wallet_address")
+          .eq("id", user.id)
+          .single();
+
+        if (data) {
+          setTwitterHandle(data.twitter_handle || "");
+          setWalletAddress(data.wallet_address || "");
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
-    loadBindings();
-  }, [isLoaded, user, supabase]);
+    loadSettings();
+  }, [isLoaded, user, getToken]);
 
-  const saveBindings = async () => {
-    if (!user?.id) return;
+  const saveSettings = async () => {
+    if (!user?.id) return toast.error("Please sign in");
 
     setSaving(true);
 
-    const { error } = await supabase
-      .from("users")
-      .upsert({
-        id: user.id,
-        twitter_handle: twitterHandle.trim() || null,
-        wallet_address: walletAddress.trim() || null,
-      }, { onConflict: "id" });
+    try {
+      const token = await getToken({ template: "supabase" });
+      if (!token) throw new Error("Authentication failed");
 
-    if (error) {
-      toast.error("Failed to save");
-    } else {
-      toast.success("Settings saved successfully");
+      const supabaseWithToken = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        { global: { headers: { Authorization: `Bearer ${token}` } } }
+      );
+
+      const { error } = await supabaseWithToken
+        .from("users")
+        .upsert({
+          id: user.id,
+          twitter_handle: twitterHandle.trim() || null,
+          wallet_address: walletAddress.trim() || null,
+          updated_at: new Date().toISOString(),
+        });
+
+      if (error) throw error;
+
+      toast.success("Settings Saved Successfully", {
+        description: "Your Twitter handle and wallet address have been updated.",
+      });
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Failed to save settings", {
+        description: err.message || "Please try again",
+      });
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   if (!isLoaded || loading) {
-    return <div className="flex justify-center py-20"><Loader2 className="h-10 w-10 animate-spin text-[#caf403]" /></div>;
+    return (
+      <div className="flex justify-center py-20">
+        <Loader2 className="h-10 w-10 animate-spin text-[#caf403]" />
+      </div>
+    );
   }
 
   return (
@@ -74,7 +110,7 @@ export default function SettingsPage() {
           <CardTitle className="text-white">Twitter / X Account</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Label className="text-white">Twitter Handle (only one allowed)</Label>
+          <Label className="text-white">Twitter Handle</Label>
           <Input
             placeholder="@yourusername"
             value={twitterHandle}
@@ -82,17 +118,17 @@ export default function SettingsPage() {
             className="bg-[#0d0d0d] text-white"
           />
           <p className="text-sm text-gray-400">
-            This will be the only Twitter account used for all your task engagements.
+            This will be used for all your task engagements.
           </p>
         </CardContent>
       </Card>
 
       <Card className="bg-[#1a1a1a] border-gray-800 mb-8">
         <CardHeader>
-          <CardTitle className="text-white">EVM Wallet Address</CardTitle>
+          <CardTitle className="text-white">Withdrawal Wallet</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Label className="text-white">Wallet Address (for USDT payouts)</Label>
+          <Label className="text-white">EVM Wallet Address (BSC)</Label>
           <Input
             placeholder="0x1234...abcd"
             value={walletAddress}
@@ -100,17 +136,24 @@ export default function SettingsPage() {
             className="bg-[#0d0d0d] text-white"
           />
           <p className="text-sm text-gray-400">
-            This is where you'll receive USDT when withdrawals are approved.
+            This is where you will receive USDT from approved withdrawals.
           </p>
         </CardContent>
       </Card>
 
       <Button
-        onClick={saveBindings}
+        onClick={saveSettings}
         disabled={saving}
-        className="w-full bg-[#caf403] text-black py-6 text-lg font-bold"
+        className="w-full bg-[#caf403] text-black py-6 text-lg font-bold hover:bg-[#b0e000] disabled:opacity-50"
       >
-        {saving ? "Saving..." : "Save Settings"}
+        {saving ? (
+          <span className="flex items-center gap-2">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            Saving...
+          </span>
+        ) : (
+          "Save Settings"
+        )}
       </Button>
     </div>
   );

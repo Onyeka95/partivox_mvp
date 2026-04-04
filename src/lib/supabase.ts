@@ -1,7 +1,23 @@
-// import { createClient } from "@supabase/supabase-js";
+import { createClient } from '@supabase/supabase-js';
+import { useUser } from '@clerk/nextjs'; // We'll use this in components
 
-// const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-// const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+// Basic client (for cases where we don't have session yet)
+export const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
-
-// export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Function to create a client with Clerk token (recommended)
+export const createSupabaseClientWithClerk = (clerkToken?: string) => {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      global: {
+        headers: {
+          Authorization: clerkToken ? `Bearer ${clerkToken}` : '',
+        },
+      },
+    }
+  );
+};

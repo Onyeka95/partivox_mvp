@@ -12,13 +12,19 @@ export function AuthSync() {
 
     const runSync = async () => {
       try {
-        console.log("Full sign-in confirmed - starting sync");
-        const result = await syncUserProfile();
+        const email = user.emailAddresses[0]?.emailAddress || "";
 
-        if (result.error) {
-          console.error("Server sync error:", result.error);
+        console.log("Full sign-in confirmed - starting sync for:", email);
+
+        const result = await syncUserProfile({
+          id: user.id,
+          email: email,
+        });
+
+        if (result.success) {
+          console.log("✅ User profile synced successfully via server");
         } else {
-          console.log("User profile synced via server");
+          console.error("❌ Server sync failed:", result.error);
         }
       } catch (err) {
         console.error("Sync call failed:", err);

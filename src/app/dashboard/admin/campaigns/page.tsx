@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSupabase } from "@/lib/supabase-client";
+import { useAuth } from "@clerk/nextjs";
+import { createClient } from "@supabase/supabase-js";
 import {
   Card,
   CardContent,
@@ -15,19 +16,31 @@ import { Loader2, CheckCircle, XCircle, CheckSquare } from "lucide-react";
 import { toast } from "sonner";
 
 export default function AdminCampaignsPage() {
-  const supabase = useSupabase();
+  const { getToken } = useAuth();
+
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchCampaigns();
-  }, []);
+  const getSupabaseWithToken = async () => {
+    const token = await getToken({ template: "supabase" });
+    if (!token) throw new Error("No authentication token");
+
+    return createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        global: { headers: { Authorization: `Bearer ${token}` } }
+      }
+    );
+  };
 
   const fetchCampaigns = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      const supabaseWithToken = await getSupabaseWithToken();
+
+      const { data, error } = await supabaseWithToken
         .from("campaigns")
         .select(`
           *,
@@ -40,6 +53,7 @@ export default function AdminCampaignsPage() {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
+
       setCampaigns(data || []);
     } catch (err: any) {
       console.error("Fetch error:", err);
@@ -48,6 +62,10 @@ export default function AdminCampaignsPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchCampaigns();
+  }, []);
 
   const handleAction = async (
     campaignId: string,
@@ -66,6 +84,7 @@ export default function AdminCampaignsPage() {
     setProcessing(campaignId);
 
     try {
+      const supabaseWithToken = await getSupabaseWithToken();
       let updateData: any = {};
 
       if (action === "approve") {
@@ -73,9 +92,9 @@ export default function AdminCampaignsPage() {
       } else if (action === "reject") {
         updateData = { status: "rejected" };
 
-        // Refund diamonds if rejected
+        // Refund diamonds if rejecting
         if (totalDiamonds && userId) {
-          const { error: refundError } = await supabase.rpc("increment_balance", {
+          const { error: refundError } = await supabaseWithToken.rpc("increment_balance", {
             user_id_param: userId,
             amount_param: totalDiamonds,
           });
@@ -86,14 +105,14 @@ export default function AdminCampaignsPage() {
         updateData = { status: "completed" };
       }
 
-      const { error } = await supabase
+      const { error } = await supabaseWithToken
         .from("campaigns")
         .update(updateData)
         .eq("id", campaignId);
 
       if (error) throw error;
 
-      toast.success(`Campaign ${action}d!`);
+      toast.success(`Campaign ${action}d successfully!`);
 
       // Remove from list
       setCampaigns((prev) => prev.filter((c) => c.id !== campaignId));

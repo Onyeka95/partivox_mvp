@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useSupabase } from "@/lib/supabase-client";
+import { supabase } from "@/lib/supabase";
 import { useUser } from "@clerk/nextjs";
 
 interface ClaimTaskModalProps {
@@ -33,7 +33,6 @@ export function ClaimTaskModal({
   onClaimSuccess,
 }: ClaimTaskModalProps) {
   const { user } = useUser();
-  const supabase = useSupabase();
   const [screenshot, setScreenshot] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);

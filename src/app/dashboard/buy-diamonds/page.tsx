@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useUser } from "@clerk/nextjs";
-import { useSupabase } from "@/lib/supabase-client";
+import { useUser, useAuth } from "@clerk/nextjs";
+import { createClient } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,33 +10,43 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { AlertCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
-// ────────────────────────────────────────────────
-// CONFIG – change these values when switching networks
-// ────────────────────────────────────────────────
-const IS_TESTNET = true; // ← change to false when ready for mainnet
+// CONFIG
+const IS_TESTNET = true;
 const TREASURY_WALLET = IS_TESTNET
-  ? "0x6cbfE25E3d26dec6c2eFB6eede9b5687b3a31e9f" // ← REPLACE with your BSC Testnet wallet
+  ? "0x6cbfE25E3d26dec6c2eFB6eede9b5687b3a31e9f"
   : "0x9D3A2eF16f6592F6C29fdCF1e3DC9f75a9D1b45D";
 
-const DIAMOND_TO_USDT_RATE = 0.001; // 1 diamond = 0.001 USDT
-const PLATFORM_FEE_PERCENT = 20;     // 20% fee on purchase
+const DIAMOND_TO_USDT_RATE = 0.001;
+const PLATFORM_FEE_PERCENT = 20;
 
 export default function BuyDiamondsPage() {
   const { user, isLoaded } = useUser();
-  const supabase = useSupabase();
+  const { getToken } = useAuth();
+
   const [diamondsWanted, setDiamondsWanted] = useState("");
   const [txHash, setTxHash] = useState("");
-  const [proofFile, setProofFile] = useState<File | null>(null);       // ← NEW: screenshot/proof
+  const [proofFile, setProofFile] = useState<File | null>(null);
   const [proofPreview, setProofPreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [userBalance, setUserBalance] = useState<number>(0);
 
-  // Load current balance (just for display/reference)
+  // Load balance with token
   useEffect(() => {
     if (!isLoaded || !user?.id) return;
 
     const loadBalance = async () => {
-      const { data } = await supabase
+      const token = await getToken({ template: "supabase" });
+      if (!token) return;
+
+      const supabaseWithToken = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          global: { headers: { Authorization: `Bearer ${token}` } }
+        }
+      );
+
+      const { data } = await supabaseWithToken
         .from("users")
         .select("diamonds_balance")
         .eq("id", user.id)
@@ -46,21 +56,19 @@ export default function BuyDiamondsPage() {
     };
 
     loadBalance();
-  }, [isLoaded, user, supabase]);
+  }, [isLoaded, user, getToken]);
 
-  const totalUSDT = Number(diamondsWanted) * DIAMOND_TO_USDT_RATE;
+  const totalUSDT = Number(diamondsWanted) * DIAMOND_TO_USDT_RATE || 0;
   const feeUSDT = totalUSDT * (PLATFORM_FEE_PERCENT / 100);
   const youPayUSDT = totalUSDT + feeUSDT;
 
   const handleProofChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     if (file.size > 5 * 1024 * 1024) {
       toast.error("File too large (max 5MB)");
       return;
     }
-
     setProofFile(file);
     const reader = new FileReader();
     reader.onloadend = () => setProofPreview(reader.result as string);
@@ -74,52 +82,59 @@ export default function BuyDiamondsPage() {
     if (!diamonds || diamonds <= 0) return toast.error("Enter a valid amount");
     if (!txHash.trim()) return toast.error("Please paste the transaction hash");
 
-    // On mainnet, require proof screenshot
-    if (!IS_TESTNET && !proofFile) {
-      return toast.error("Please upload proof of payment (screenshot from platform)");
-    }
-
     setSubmitting(true);
 
     try {
+      const token = await getToken({ template: "supabase" });
+      if (!token) throw new Error("Authentication failed");
+
+      const supabaseWithToken = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          global: { headers: { Authorization: `Bearer ${token}` } }
+        }
+      );
+
       let proofUrl = null;
 
-      // Upload proof screenshot (only if provided – on mainnet it's required)
       if (proofFile) {
         const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${proofFile.name.split('.').pop()}`;
-        const { error: uploadError } = await supabase.storage
+        const { error: uploadError } = await supabaseWithToken.storage
           .from("diamond_purchases")
           .upload(`proofs/${fileName}`, proofFile);
 
         if (uploadError) throw uploadError;
 
-        const { data: urlData } = supabase.storage.from("diamond_purchases").getPublicUrl(`proofs/${fileName}`);
+        const { data: urlData } = supabaseWithToken.storage
+          .from("diamond_purchases")
+          .getPublicUrl(`proofs/${fileName}`);
         proofUrl = urlData.publicUrl;
       }
 
-      const { error } = await supabase.from("diamond_purchases").insert({
+      const { error } = await supabaseWithToken.from("diamond_purchases").insert({
         user_id: user.id,
         diamonds_requested: diamonds,
         usdt_amount: youPayUSDT,
         tx_hash: txHash.trim(),
-        proof_url: proofUrl,           // ← saved when uploaded
+        proof_url: proofUrl,
         status: "pending",
-        created_at: new Date().toISOString(),
       });
 
       if (error) throw error;
 
       toast.success("Purchase Request Sent", {
-        description: `Requested ${diamonds} diamonds (~${youPayUSDT.toFixed(6)} USDT). Admin will review your transaction and proof shortly.`,
+        description: `Requested ${diamonds} diamonds (~${youPayUSDT.toFixed(6)} USDT). Admin will review shortly.`,
       });
 
       setDiamondsWanted("");
       setTxHash("");
       setProofFile(null);
       setProofPreview(null);
+
     } catch (err: any) {
-      toast.error("Failed to submit request", { description: err.message });
-      console.error(err);
+      console.error("Insert error:", err);
+      toast.error("Failed to submit request", { description: err.message || "Please try again" });
     } finally {
       setSubmitting(false);
     }
@@ -145,23 +160,15 @@ export default function BuyDiamondsPage() {
               This is a test environment using BSC Testnet USDT (free). Real purchases are not active yet.
             </div>
           </div>
-
           <Button
             variant="outline"
             className="border-yellow-500 text-black hover:bg-yellow-950 hover:text-yellow-200 self-start"
             asChild
           >
             <a href="https://www.bnbchain.org/en/testnet-faucet" target="_blank" rel="noopener noreferrer">
-              Get Free Testnet USDT (BNB Chain Faucet)
+              Get Free Testnet USDT
             </a>
           </Button>
-        </div>
-      )}
-
-      {!IS_TESTNET && (
-        <div className="mb-8 p-5 bg-green-950 border border-green-700 rounded-xl text-green-300">
-          <strong>Mainnet Purchases Active</strong><br />
-          Send USDT (BEP-20) on BSC to the treasury wallet below and upload proof.
         </div>
       )}
 
@@ -186,80 +193,32 @@ export default function BuyDiamondsPage() {
 
           {diamondsWanted && Number(diamondsWanted) > 0 && (
             <div className="p-5 bg-[#0d0d0d] rounded-xl space-y-3 text-sm">
-              <p>
-                Diamonds: <strong>{diamondsWanted}</strong>
-              </p>
-              <p>
-                Gross cost: <strong>{totalUSDT.toFixed(6)} USDT</strong>
-              </p>
-              <p className="text-yellow-400">
-                Platform fee (20%): <strong>{feeUSDT.toFixed(6)} USDT</strong>
-              </p>
-              <p className="text-lg font-medium text-[#caf403]">
-                You pay: {youPayUSDT.toFixed(6)} USDT
-              </p>
+              <p>Diamonds: <strong>{diamondsWanted}</strong></p>
+              <p>Gross cost: <strong>{totalUSDT.toFixed(6)} USDT</strong></p>
+              <p className="text-yellow-400">Platform fee (20%): <strong>{feeUSDT.toFixed(6)} USDT</strong></p>
+              <p className="text-lg font-medium text-[#caf403]">You pay: {youPayUSDT.toFixed(6)} USDT</p>
             </div>
           )}
 
           <div className="space-y-2">
-            <Label className="text-white">Send USDT to this wallet (BSC {IS_TESTNET ? "Testnet" : "Mainnet"})</Label>
+            <Label className="text-white">Send USDT to this wallet</Label>
             <div className="flex items-center gap-3">
-              <Input
-                value={TREASURY_WALLET}
-                readOnly
-                className="bg-[#0d0d0d] font-mono text-sm flex-1 text-white"
-              />
-              <Button
-                variant="outline"
-                onClick={() => {
-                  navigator.clipboard.writeText(TREASURY_WALLET);
-                  toast.success("Wallet address copied!");
-                }}
-              >
+              <Input value={TREASURY_WALLET} readOnly className="bg-[#0d0d0d] font-mono text-sm flex-1 text-white" />
+              <Button variant="outline" onClick={() => { navigator.clipboard.writeText(TREASURY_WALLET); toast.success("Copied!"); }}>
                 Copy
               </Button>
             </div>
-            <p className="text-xs text-gray-500">
-              Network: BSC {IS_TESTNET ? "Testnet (Chain ID 97)" : "Mainnet (Chain ID 56)"}
-            </p>
           </div>
 
           <div className="space-y-2">
             <Label className="text-white">Transaction Hash (TxID)</Label>
-            <Input
-              placeholder="0x..."
-              value={txHash}
-              onChange={(e) => setTxHash(e.target.value)}
-              className="bg-[#0d0d0d] text-white"
-            />
-            <p className="text-xs text-gray-400">
-              Paste the transaction hash after sending USDT.
-            </p>
+            <Input placeholder="0x..." value={txHash} onChange={(e) => setTxHash(e.target.value)} className="bg-[#0d0d0d] text-white" />
           </div>
 
-          {/* Screenshot/Proof Upload – visible on both testnet & mainnet, but required only on mainnet */}
           <div className="space-y-2">
-            <Label className="text-white">
-              Proof of Payment {IS_TESTNET ? "(optional for testnet)" : "(required)"}
-            </Label>
-            <Input
-              type="file"
-              accept="image/*"
-              onChange={handleProofChange}
-              className="bg-[#0d0d0d] text-white"
-            />
-            <p className="text-xs text-gray-400">
-              Upload screenshot/receipt showing you sent USDT to this treasury wallet.
-            </p>
-            {proofPreview && (
-              <div className="mt-2">
-                <img
-                  src={proofPreview}
-                  alt="Proof preview"
-                  className="max-h-48 rounded border border-gray-700"
-                />
-              </div>
-            )}
+            <Label className="text-white">Proof of Payment {IS_TESTNET ? "(optional)" : "(required)"}</Label>
+            <Input type="file" accept="image/*" onChange={handleProofChange} className="bg-[#0d0d0d] text-white" />
+            {proofPreview && <img src={proofPreview} alt="Proof" className="max-h-48 rounded border border-gray-700 mt-2" />}
           </div>
 
           <Button
