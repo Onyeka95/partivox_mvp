@@ -181,7 +181,7 @@ export default function DashboardPage() {
                 <p className="text-gray-400 text-sm">Convert diamonds to USDT</p>
               </div>
               <Button variant="outline" className="mt-4 border-[#caf403] text-black hover:bg-white">
-                Withdraw Now
+                Withdraw
               </Button>
             </div>
           </Link>

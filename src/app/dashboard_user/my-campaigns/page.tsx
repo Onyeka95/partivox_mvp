@@ -141,7 +141,7 @@ export default function MyCampaignsPage() {
                 </CardContent>
 
                 <CardFooter>
-                  <Link href={`/dashboard/claim/${campaign.id}`} className="w-full">
+                  <Link href={`/dashboard_user/claim/${campaign.id}`} className="w-full">
                     <Button variant="outline" className="w-full">
                       View Details
                     </Button>

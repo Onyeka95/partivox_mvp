@@ -14,7 +14,7 @@ import {
   CardTitle,
   CardFooter,
 } from "@/components/ui/card";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 
@@ -163,7 +163,7 @@ export default function ClaimCampaignPage() {
       });
 
       setHasClaimed(true);
-      router.push("/dashboard/my-claims");
+      router.push("/dashboard_user/my-claims");
 
     } catch (err: any) {
       console.error("Claim error:", err);
@@ -205,7 +205,7 @@ export default function ClaimCampaignPage() {
             You have already submitted a claim for this campaign.
           </p>
           <Button asChild size="lg" className="bg-[#caf403] hover:bg-[#b0e000] text-black">
-            <Link href="/dashboard/my-claims">View My Claims</Link>
+            <Link href="/dashboard_user/my-claims">View My Claims</Link>
           </Button>
         </div>
       </div>
@@ -251,6 +251,31 @@ export default function ClaimCampaignPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* 🔥 Engagement Links Section (NEW) */}
+        {campaign.links?.length > 0 && (
+          <Card className="bg-[#1a1a1a] border-gray-700 text-white">
+            <CardHeader>
+              <CardTitle>Engagement Tasks</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {campaign.links.map((link: string, index: number) => (
+                <a
+                  key={index}
+                  href={link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-between bg-[#111] p-4 rounded-lg hover:bg-[#1f1f1f] transition"
+                >
+                  <span className="truncate">{link}</span>
+                  <ExternalLink className="h-4 w-4 text-[#caf403]" />
+                </a>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
+        
 
         {/* Submission Form */}
         <Card className="bg-[#1a1a1a] border-gray-700">
