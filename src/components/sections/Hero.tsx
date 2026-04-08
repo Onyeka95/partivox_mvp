@@ -53,7 +53,7 @@ export default function Hero() {
           className="bg-[#caf403] text-black font-bold text-lg px-10 py-6 rounded-full hover:bg-[#b0d900] transition shadow-lg"
           size="lg"
         >
-          Connect Wallet
+          Get Started
         </Button>
       </div>
     </section>

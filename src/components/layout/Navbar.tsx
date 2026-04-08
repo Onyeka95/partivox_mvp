@@ -103,12 +103,12 @@ const dashboardLink =
               Dashboard
             </Link> */}
             <Link
-  href={dashboardLink}
-  className="hover:text-[#caf403] transition py-3 md:py-0 font-medium"
-  onClick={() => setIsOpen(false)}
->
-  Dashboard
-</Link>
+              href={dashboardLink}
+              className="hover:text-[#caf403] transition py-3 md:py-0 font-medium"
+              onClick={() => setIsOpen(false)}
+            >
+              Dashboard
+            </Link>
 
             
           </div>
