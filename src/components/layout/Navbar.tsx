@@ -87,7 +87,7 @@ const dashboardLink =
               Features
             </a>
             <a
-              href="#works"
+              href="/how_it_works"
               className="hover:text-[#caf403] transition py-3 md:py-0"
               onClick={() => setIsOpen(false)}
             >
