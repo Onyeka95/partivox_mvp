@@ -96,7 +96,7 @@ export default function AdminCampaignsPage() {
         if (totalDiamonds && userId) {
           const { error: refundError } = await supabaseWithToken.rpc("increment_balance", {
             user_id_param: userId,
-            amount_param: totalDiamonds,
+            amount: totalDiamonds,
           });
           if (refundError) throw refundError;
           toast.info("Diamonds refunded to creator");
