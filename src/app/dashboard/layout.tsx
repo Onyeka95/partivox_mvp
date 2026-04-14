@@ -70,6 +70,7 @@ export default function DashboardLayout({
         `}
       >
         <div className="p-6">
+          {/* <a href="http://" className="text-2xl font-bold text-[#caf403] mb-10">Partivox</a> */}
           <h2 className="text-2xl font-bold text-[#caf403] mb-10">Partivox</h2>
 
           <nav className="space-y-2">

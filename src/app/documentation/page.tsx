@@ -41,7 +41,7 @@ export default function DocumentationPage() {
 
           <section>
             <h2 className="text-xl font-semibold text-white mb-3">Support</h2>
-            <p>For technical issues or questions, reach us at <a href="mailto:partivox11@gmail.com" className="text-[#caf403] hover:underline">partivox11@gmail.com</a> or join our <a href="https://t.me/partivox" target="_blank" className="text-[#caf403] hover:underline">Telegram community</a>.</p>
+            <p>For technical issues or questions, reach us at <a href="mailto:partivox11@gmail.com" className="text-[#caf403] hover:underline">partivox11@gmail.com</a> or join our <a href="https://t.me/partivoxs" target="_blank" className="text-[#caf403] hover:underline">Telegram community</a>.</p>
           </section>
         </div>
       </div>

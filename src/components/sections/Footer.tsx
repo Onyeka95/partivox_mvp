@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Twitter, Mail, Send } from "lucide-react";
+import { SignInButton, UserButton, ClerkLoaded, useUser } from "@clerk/nextjs";
 
 const footerLinks = [
   { label: "Privacy Policy", href: "/privacy_policy" },
@@ -15,12 +16,12 @@ const footerLinks = [
 const socialLinks = [
   {
     label: "Twitter",
-    href: "https://x.com/partivox_",
+    href: "https://x.com/parti_vox",
     icon: Twitter,
   },
   {
     label: "Telegram",
-    href: "https://t.me/partivox",
+    href: "https://t.me/partivoxs",
     icon: Send,
   },
   {
@@ -60,12 +61,14 @@ export default function Footer() {
 
           {/* Right: CTA */}
           <div className="flex-shrink-0">
+          <SignInButton mode="modal">  
             <Button
               size="lg"
               className="bg-[#caf403] text-black font-bold hover:bg-[#b0d900] rounded-full px-10 py-6 text-base tracking-wide uppercase"
             >
               Get Started
             </Button>
+          </SignInButton>
           </div>
         </div>
 

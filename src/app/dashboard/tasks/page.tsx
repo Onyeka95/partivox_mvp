@@ -134,7 +134,7 @@ export default function TaskFeedPage() {
 
                 <CardFooter className="pt-4">
                   <Link href={`/dashboard/claim/${campaign.id}`} className="w-full">
-                    <Button className="w-full bg-[#caf403] hover:bg-[#b0e000] text-black py-5 font-semibold">
+                    <Button className="w-full bg-[#caf403] hover:bg-[#eff6d5] text-black py-5 font-semibold">
                       Start Tasks
                     </Button>
                   </Link>

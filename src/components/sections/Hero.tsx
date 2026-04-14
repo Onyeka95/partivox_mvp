@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { SignInButton, UserButton, ClerkLoaded, useUser } from "@clerk/nextjs";
 
 export default function Hero() {
   return (
@@ -48,13 +49,14 @@ export default function Hero() {
         <p className="text-lg md:text-xl mb-10 text-gray-300 max-w-3xl mx-auto">
           Launch affordable tweet campaigns or earn crypto by engaging with posts you love
         </p>
-
+      <SignInButton mode="modal">
         <Button
           className="bg-[#caf403] text-black font-bold text-lg px-10 py-6 rounded-full hover:bg-[#b0d900] transition shadow-lg"
           size="lg"
         >
           Get Started
         </Button>
+      </SignInButton>
       </div>
     </section>
   );
