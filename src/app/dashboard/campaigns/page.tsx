@@ -37,11 +37,11 @@ export default function CreateCampaignPage() {
 
   // Task definitions
   const tasks = [
-    { id: "like", label: "Like", defaultReward: 8 },
-    { id: "retweet", label: "Retweet", defaultReward: 10 },
-    { id: "comment", label: "Comment", defaultReward: 10 },
-    { id: "follow", label: "Follow", defaultReward: 10 },
-    { id: "quote", label: "Quote Tweet", defaultReward: 12 },
+    { id: "like", label: "Like", defaultReward: 50 },
+    { id: "retweet", label: "Retweet", defaultReward: 50 },
+    { id: "comment", label: "Comment", defaultReward: 50 },
+    { id: "follow", label: "Follow", defaultReward: 50 },
+    { id: "quote", label: "Quote Tweet", defaultReward: 50 },
   ];
 
   // Calculate total diamonds required
